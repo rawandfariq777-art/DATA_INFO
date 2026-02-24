@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام جمع البيانات</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;600;700&display=swap');
+  :root {
+    --primary:#1a3a5c; --accent:#e8a020; --bg:#f4f7fb;
+    --border:#dde3ee; --text:#1a2a3a; --muted:#7a8a9a;
+    --success:#2d9e6b; --danger:#c0392b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Kufi Arabic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  .header{background:var(--primary);color:white;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(26,58,92,.3);}
+  .header h1{font-size:1.2rem;font-weight:600;}
+  .header-left{display:flex;align-items:center;gap:12px;}
+  .user-badge{background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;font-size:.85rem;}
+
+  .view{display:none;padding:28px 18px;max-width:960px;margin:0 auto;}
+  .view.active{display:block;}
+
+  .card{background:white;border-radius:14px;padding:36px;box-shadow:0 6px 30px rgba(26,58,92,.09);}
+  .card-sm{max-width:440px;margin:50px auto 0;}
+  .card h2{color:var(--primary);margin-bottom:26px;font-size:1.2rem;border-bottom:2px solid var(--accent);padding-bottom:10px;}
+
+  .form-group{margin-bottom:18px;}
+  label{display:block;font-weight:600;margin-bottom:7px;font-size:.88rem;color:var(--primary);}
+  .req{color:var(--danger);}
+  input,select{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:9px;font-family:inherit;font-size:.93rem;color:var(--text);background:var(--bg);transition:border-color .2s;direction:rtl;}
+  input:focus,select:focus{outline:none;border-color:var(--accent);background:white;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+
+  .btn{padding:11px 28px;border:none;border-radius:9px;font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;}
+  .btn-block{width:100%;margin-top:8px;}
+  .btn-primary{background:var(--primary);color:white;}
+  .btn-primary:hover{background:#244d7a;}
+  .btn-accent{background:var(--accent);color:white;}
+  .btn-accent:hover{background:#d4911a;}
+  .btn-danger{background:var(--danger);color:white;}
+  .btn-gray{background:#6b7280;color:white;}
+  .btn-green{background:var(--success);color:white;}
+  .btn-sm{padding:7px 16px;font-size:.82rem;}
+
+  .alert{padding:13px 18px;border-radius:9px;margin-bottom:18px;font-weight:500;font-size:.9rem;}
+  .alert-error{background:#fee2e2;color:#991b1b;border-right:4px solid var(--danger);}
+  .alert-success{background:#d1fae5;color:#065f46;border-right:4px solid var(--success);}
+
+  .top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .top-bar h2{color:var(--primary);font-size:1.15rem;margin:0;border:none;padding:0;}
+
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:white;border-radius:11px;padding:18px;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.07);border-top:4px solid var(--accent);}
+  .stat-card .num{font-size:1.9rem;font-weight:700;color:var(--primary);}
+  .stat-card .lbl{font-size:.76rem;color:var(--muted);margin-top:3px;}
+
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;background:white;border-radius:11px;overflow:hidden;box-shadow:0 3px 18px rgba(0,0,0,.07);font-size:.88rem;}
+  th{background:var(--primary);color:white;padding:13px 14px;text-align:right;font-weight:600;white-space:nowrap;}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);text-align:right;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#f0f5ff;}
+
+  .badge{display:inline-block;padding:3px 11px;border-radius:18px;font-size:.78rem;font-weight:600;}
+  .b1{background:#dbeafe;color:#1e40af;}.b2{background:#d1fae5;color:#065f46;}
+  .b3{background:#fed7aa;color:#9a3412;}.b4{background:#ede9fe;color:#4c1d95;}
+  .b5{background:#fee2e2;color:#991b1b;}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);}
+  .empty .ei{font-size:2.8rem;margin-bottom:10px;}
+
+  .link-box{background:#f0f5ff;border:2px dashed var(--accent);border-radius:11px;padding:18px;margin-bottom:22px;}
+  .link-box .lb-lbl{font-size:.82rem;color:var(--muted);margin-bottom:9px;}
+  .link-row{display:flex;gap:8px;align-items:center;}
+  .link-row input{font-size:.82rem;background:white;flex:1;}
+
+  .refresh-bar{background:white;border-radius:11px;padding:14px 20px;margin-bottom:20px;box-shadow:0 3px 14px rgba(0,0,0,.07);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .refresh-bar span{font-size:.85rem;color:var(--muted);}
+  .pulse{display:inline-block;width:10px;height:10px;background:var(--success);border-radius:50%;animation:pulse 1.5s infinite;flex-shrink:0;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.3);}}
+
+  .login-icon{font-size:3rem;text-align:center;margin-bottom:14px;}
+
+  .success-inner{text-align:center;padding:16px 0;}
+  .ck{font-size:4.5rem;margin-bottom:16px;}
+  .success-inner h2{color:var(--success);font-size:1.4rem;margin-bottom:10px;}
+  .success-inner p{color:var(--muted);line-height:1.8;margin-bottom:22px;}
+
+  /* Loading overlay */
+  #loading{position:fixed;inset:0;background:rgba(26,58,92,.7);display:flex;align-items:center;justify-content:center;z-index:9999;display:none;}
+  .spinner{width:48px;height:48px;border:5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* Notif */
+  #notif{position:fixed;top:76px;left:50%;transform:translateX(-50%);background:#1a3a5c;color:white;padding:13px 26px;border-radius:11px;font-family:inherit;font-size:.93rem;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.2);z-index:9998;opacity:0;transition:opacity .4s;pointer-events:none;}
+
+  .new-row td{animation:hl 4s ease-out forwards;}
+  @keyframes hl{0%{background:#fef9c3;}100%{background:transparent;}}
+
+  @media(max-width:600px){
+    .form-row{grid-template-columns:1fr;}
+    .card{padding:20px 14px;}
+    .view{padding:16px 10px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div></div>
+<div id="notif"></div>
+
+<div class="header">
+  <span style="font-size:1.7rem">📋</span>
+  <h1>نظام جمع بيانات الموظفين</h1>
+  <div class="header-left">
+    <span class="user-badge" id="header-user" style="display:none"></span>
+    <button class="btn btn-sm btn-danger" id="logout-btn" style="display:none" onclick="doLogout()">خروج</button>
+    <button class="btn btn-sm btn-accent" id="admin-btn" onclick="showView('view-admin-login')">🔐 الإدارة</button>
+  </div>
+</div>
+
+<!-- تسجيل دخول المستخدم -->
+<div class="view active" id="view-login">
+  <div class="card card-sm">
+    <div class="login-icon">👤</div>
+    <h2 style="text-align:center">تسجيل الدخول</h2>
+    <div id="login-alert"></div>
+    <div class="form-group">
+      <label>اسم المستخدم</label>
+      <input type="text" id="inp-user" placeholder="أدخل اسم المستخدم" autocomplete="username" style="text-transform:uppercase">
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="inp-pass" placeholder="أدخل كلمة المرور" onkeydown="if(event.key==='Enter')doUserLogin()">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doUserLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- نموذج الإدخال -->
+<div class="view" id="view-form">
+  <div class="card">
+    <h2>📋 إدخال البيانات</h2>
+    <div id="form-alert"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label><span class="req">* </span>اسم المركز</label>
+        <input type="text" id="f-center" placeholder="اسم المركز">
+      </div>
+      <div class="form-group">
+        <label><span class="req">* </span>نوع الاستخدام</label>
+        <select id="f-type">
+          <option value="">-- اختر --</option>
+          <option>مندوب</option><option>مروج</option><option>مشرف</option>
+          <option>مدير منطقة</option><option>مدير اقليمي</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label><span class="req">* </span>اسم الاستخدام</label>
+        <input type="text" id="f-name" placeholder="اسم الاستخدام">
+      </div>
+      <div class="form-group">
+        <label><span class="req">* </span>نوع الموبايل</label>
+        <input type="text" id="f-mobile" placeholder="مثلاً: Samsung S24">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label><span class="req">* </span>رقم IMEI للموبايل</label>
+        <input type="text" id="f-imei" placeholder="رقم IMEI">
+      </div>
+      <div class="form-group">
+        <label>ملاحظة</label>
+        <input type="text" id="f-note" placeholder="ملاحظة اختيارية">
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;min-width:160px;" onclick="submitForm()">✅ حفظ البيانات</button>
+      <button class="btn btn-gray btn-sm" onclick="showMyData()">📄 عرض بياناتي</button>
+    </div>
+  </div>
+</div>
+
+<!-- صفحة النجاح -->
+<div class="view" id="view-success">
+  <div class="card">
+    <div class="success-inner">
+      <div class="ck">✅</div>
+      <h2>تم حفظ البيانات بنجاح!</h2>
+      <p>تم تسجيل بياناتك بنجاح<br>شكراً جزيلاً</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="showMyData()">📄 عرض بياناتي</button>
+        <button class="btn btn-primary" onclick="showView('view-form')">➕ إضافة سجل جديد</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- بياناتي -->
+<div class="view" id="view-mydata">
+  <div class="card">
+    <div class="top-bar">
+      <h2>📄 بياناتي المسجلة</h2>
+      <button class="btn btn-sm btn-accent" onclick="showView('view-form')">➕ إضافة جديد</button>
+    </div>
+    <div id="my-table"></div>
+  </div>
+</div>
+
+<!-- تسجيل دخول المدير -->
+<div class="view" id="view-admin-login">
+  <div class="card card-sm">
+    <div class="login-icon">🔐</div>
+    <h2 style="text-align:center">لوحة الإدارة</h2>
+    <div id="admin-login-alert"></div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="admin-pass" placeholder="أدخل كلمة مرور الإدارة" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- لوحة الإدارة -->
+<div class="view" id="view-admin">
+  <div class="top-bar">
+    <h2>📊 لوحة الإدارة - جميع البيانات</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-green" onclick="manualRefresh()">🔄 تحديث</button>
+      <button class="btn btn-sm btn-accent" onclick="exportCSV()">⬇ تصدير CSV</button>
+      <button class="btn btn-sm btn-danger" onclick="clearAll()">🗑 حذف الكل</button>
+      <button class="btn btn-sm btn-gray" onclick="doAdminLogout()">خروج</button>
+    </div>
+  </div>
+
+  <div class="link-box">
+    <div class="lb-lbl">🔗 أرسل هذا الرابط للموظفين لتسجيل الدخول وإدخال بياناتهم:</div>
+    <div class="link-row">
+      <input type="text" id="share-link" readonly>
+      <button class="btn btn-sm btn-accent" id="copy-btn" onclick="copyLink()">📋 نسخ</button>
+    </div>
+  </div>
+
+  <div class="refresh-bar">
+    <span class="pulse"></span>
+    <span>تحديث تلقائي كل <b>30</b> ثانية</span>
+    <span id="last-refresh" style="margin-right:auto;font-size:.8rem;"></span>
+    <button class="btn btn-sm btn-green" onclick="manualRefresh()">🔄 تحديث الآن</button>
+  </div>
+
+  <div class="stats-row" id="admin-stats"></div>
+  <div class="table-wrap" id="admin-table"></div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const API_KEY  = '$2a$10$BcCx/bVPRndXm52HlOYxoOXUN0um31hmINmpAxtwtGAjhvNh/cg66';
+const BIN_NAME = 'employee-records';
+const ADMIN_PASS = 'Admin@2025';
+
+// ==================== USERS ====================
+const USERS = {
+  'AKR_01':'D868','AMA_01':'D869','AME_01':'D870','ANB_03':'D871',
+  'BAB_01':'D872','BAG_02':'D873','BAG_03':'D874','BAG_04':'D875',
+  'BAG_05':'D876','BAG_09':'D877','BAG_10':'D878','BAS_01':'D879',
+  'BAS_02':'D880','BLD_01':'D881','DAY_02':'D882','DIA_01':'D883',
+  'DUH_01':'D884','DUH_02':'D885','DYN_01':'D886','ERB_01':'D887',
+  'ERB_02':'D888','HO_01':'D889','KAR_01':'D890','KIR_01':'D891',
+  'KIR_02':'D892','KIR_03':'D893','KIR_04':'D894','KIR_05':'D895',
+  'KIR_07':'D896','KLA_01':'D897','KLA_02':'D898','KUT_01':'D899',
+  'MOS_01':'D900','MOS_02':'D901','MOS_04':'D902','MOS_05':'D903',
+  'NAJ_01':'D904','NAS_01':'D905','RAN_01':'D906','SAM_01':'D907',
+  'SAM_02':'D908','SEM_01':'D909','SSD_01':'D910','SUL_01':'D911',
+  'SUL_02':'D912','SUL_03':'D913','TIK_01':'D914','ZAK_01':'D915'
+};
+
+// ==================== STATE ====================
+let currentUser = null;
+let adminLogged = false;
+let BIN_ID      = localStorage.getItem('jsonbin_id') || null;
+let refreshTimer = null;
+let lastKnownCount = 0;
+
+// ==================== LOADING ====================
+const loading = doc => document.getElementById('loading').style.display = doc ? 'flex' : 'none';
+
+// ==================== JSONBIN API ====================
+async function fetchData() {
+  if (!BIN_ID) return [];
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': API_KEY }
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j.record?.records || [];
+  } catch { return []; }
+}
+
+async function saveData(records) {
+  if (!BIN_ID) {
+    // Create new bin
+    const r = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': API_KEY,
+        'X-Bin-Name': BIN_NAME,
+        'X-Bin-Private': 'true'
+      },
+      body: JSON.stringify({ records })
+    });
+    const j = await r.json();
+    BIN_ID = j.metadata?.id;
+    if (BIN_ID) localStorage.setItem('jsonbin_id', BIN_ID);
+  } else {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': API_KEY
+      },
+      body: JSON.stringify({ records })
+    });
+  }
+}
+
+// ==================== VIEWS ====================
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ==================== USER LOGIN ====================
+function doUserLogin() {
+  const u = document.getElementById('inp-user').value.trim().toUpperCase();
+  const p = document.getElementById('inp-pass').value.trim();
+  if (!USERS[u] || USERS[u] !== p) {
+    document.getElementById('login-alert').innerHTML =
+      '<div class="alert alert-error">⚠️ اسم المستخدم أو كلمة المرور غير صحيحة</div>';
+    return;
+  }
+  currentUser = u;
+  document.getElementById('header-user').textContent = '👤 ' + u;
+  document.getElementById('header-user').style.display = 'inline-block';
+  document.getElementById('logout-btn').style.display  = 'inline-block';
+  document.getElementById('admin-btn').style.display   = 'none';
+  document.getElementById('login-alert').innerHTML     = '';
+  document.getElementById('inp-pass').value            = '';
+  showView('view-form');
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('header-user').style.display = 'none';
+  document.getElementById('logout-btn').style.display  = 'none';
+  document.getElementById('admin-btn').style.display   = 'inline-block';
+  showView('view-login');
+}
+
+// ==================== FORM SUBMIT ====================
+async function submitForm() {
+  if (!currentUser) { showView('view-login'); return; }
+  const center = document.getElementById('f-center').value.trim();
+  const type   = document.getElementById('f-type').value;
+  const name   = document.getElementById('f-name').value.trim();
+  const mobile = document.getElementById('f-mobile').value.trim();
+  const imei   = document.getElementById('f-imei').value.trim();
+  const note   = document.getElementById('f-note').value.trim();
+
+  if (!center||!type||!name||!mobile||!imei) {
+    document.getElementById('form-alert').innerHTML =
+      '<div class="alert alert-error">⚠️ الرجاء تعبئة جميع الحقول الإلزامية</div>';
+    return;
+  }
+  document.getElementById('form-alert').innerHTML = '';
+
+  loading(true);
+  try {
+    const records = await fetchData();
+    records.push({
+      id: Date.now(),
+      user: currentUser,
+      center, type, name, mobile, imei, note,
+      date: new Date().toLocaleString('ar-IQ')
+    });
+    await saveData(records);
+    ['f-center','f-name','f-mobile','f-imei','f-note'].forEach(i => document.getElementById(i).value='');
+    document.getElementById('f-type').value = '';
+    showView('view-success');
+  } catch(e) {
+    document.getElementById('form-alert').innerHTML =
+      '<div class="alert alert-error">⚠️ حدث خطأ في الحفظ، حاول مرة أخرى</div>';
+  }
+  loading(false);
+}
+
+// ==================== MY DATA ====================
+async function showMyData() {
+  if (!currentUser) { showView('view-login'); return; }
+  loading(true);
+  const all  = await fetchData();
+  const rows = all.filter(r => r.user === currentUser);
+  loading(false);
+  const el = document.getElementById('my-table');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty"><div class="ei">📭</div><p>لا توجد بيانات مسجلة بعد</p></div>';
+  } else {
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>اسم المركز</th><th>نوع الاستخدام</th><th>اسم الاستخدام</th><th>نوع الموبايل</th><th>IMEI</th><th>ملاحظة</th><th>التاريخ</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${r.center}</td><td>${badge(r.type)}</td><td>${r.name}</td>
+        <td>${r.mobile}</td><td><code>${r.imei}</code></td>
+        <td>${r.note||'-'}</td><td style="font-size:.78rem;color:var(--muted)">${r.date}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+  showView('view-mydata');
+}
+
+// ==================== ADMIN LOGIN ====================
+function doAdminLogin() {
+  if (document.getElementById('admin-pass').value !== ADMIN_PASS) {
+    document.getElementById('admin-login-alert').innerHTML =
+      '<div class="alert alert-error">⚠️ كلمة المرور غير صحيحة</div>';
+    return;
+  }
+  adminLogged = true;
+  document.getElementById('admin-pass').value = '';
+  document.getElementById('admin-login-alert').innerHTML = '';
+  document.getElementById('share-link').value = location.origin + location.pathname;
+  loadAdminData(true);
+  showView('view-admin');
+  startAutoRefresh();
+}
+
+function doAdminLogout() {
+  adminLogged = false;
+  stopAutoRefresh();
+  showView('view-login');
+}
+
+// ==================== ADMIN RENDER ====================
+async function loadAdminData(isFirst = false) {
+  loading(true);
+  const data = await fetchData();
+  loading(false);
+
+  const newIds = [];
+  if (!isFirst && data.length > lastKnownCount) {
+    const newCount = data.length - lastKnownCount;
+    const newest = data.slice(-newCount);
+    newest.forEach(r => newIds.push(r.id));
+    showNotif(`📬 تم استلام ${newCount} سجل جديد!`);
+  }
+  lastKnownCount = data.length;
+  renderAdmin(data, newIds);
+  updateTimestamp();
+}
+
+function renderAdmin(data, highlightIds = []) {
+  const statsEl = document.getElementById('admin-stats');
+  const tableEl = document.getElementById('admin-table');
+  const types = {}, users = new Set();
+  data.forEach(r => { types[r.type]=(types[r.type]||0)+1; users.add(r.user); });
+
+  statsEl.innerHTML =
+    `<div class="stat-card"><div class="num">${data.length}</div><div class="lbl">إجمالي السجلات</div></div>`+
+    `<div class="stat-card"><div class="num">${users.size}</div><div class="lbl">عدد المستخدمين</div></div>`+
+    Object.entries(types).map(([k,v])=>`<div class="stat-card"><div class="num">${v}</div><div class="lbl">${k}</div></div>`).join('');
+
+  if (!data.length) {
+    tableEl.innerHTML = '<div class="empty"><div class="ei">📭</div><p>لا توجد بيانات حتى الآن</p></div>';
+    return;
+  }
+
+  const sorted = [...data].reverse();
+  tableEl.innerHTML = `<table>
+    <thead><tr><th>#</th><th>المستخدم</th><th>اسم المركز</th><th>نوع الاستخدام</th><th>اسم الاستخدام</th><th>نوع الموبايل</th><th>IMEI</th><th>ملاحظة</th><th>التاريخ</th><th>حذف</th></tr></thead>
+    <tbody>${sorted.map((r,i)=>`<tr class="${highlightIds.includes(r.id)?'new-row':''}">
+      <td style="color:var(--muted)">${sorted.length-i}</td>
+      <td><b>${r.user}</b></td><td>${r.center}</td><td>${badge(r.type)}</td><td>${r.name}</td>
+      <td>${r.mobile}</td><td><code style="font-size:.8rem">${r.imei}</code></td>
+      <td>${r.note||'-'}</td><td style="font-size:.76rem;color:var(--muted);white-space:nowrap">${r.date}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="delRec(${r.id})">🗑</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ==================== AUTO REFRESH ====================
+function startAutoRefresh() {
+  stopAutoRefresh();
+  refreshTimer = setInterval(() => { if (adminLogged) loadAdminData(); else stopAutoRefresh(); }, 30000);
+}
+function stopAutoRefresh() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
+function manualRefresh() { if (adminLogged) loadAdminData(); }
+
+function updateTimestamp() {
+  const el = document.getElementById('last-refresh');
+  if (el) el.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ');
+}
+
+// ==================== HELPERS ====================
+async function delRec(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
+  loading(true);
+  const records = (await fetchData()).filter(r => r.id !== id);
+  await saveData(records);
+  loading(false);
+  lastKnownCount = records.length;
+  renderAdmin(records);
+  updateTimestamp();
+}
+
+async function clearAll() {
+  if (!confirm('⚠️ هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع!')) return;
+  loading(true);
+  await saveData([]);
+  loading(false);
+  lastKnownCount = 0;
+  renderAdmin([]);
+}
+
+async function exportCSV() {
+  loading(true);
+  const data = await fetchData();
+  loading(false);
+  if (!data.length) { alert('لا توجد بيانات للتصدير'); return; }
+  const h = ['المستخدم','اسم المركز','نوع الاستخدام','اسم الاستخدام','نوع الموبايل','IMEI','ملاحظة','التاريخ'];
+  const rows = data.map(r=>[r.user,r.center,r.type,r.name,r.mobile,r.imei,r.note||'',r.date]);
+  const csv = '\uFEFF'+[h,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'بيانات_الموظفين_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(document.getElementById('share-link').value).then(()=>{
+    const b = document.getElementById('copy-btn');
+    b.textContent='✅ تم النسخ!';
+    setTimeout(()=>b.textContent='📋 نسخ',2000);
+  });
+}
+
+let notifTimer = null;
+function showNotif(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg; n.style.opacity = '1';
+  if (notifTimer) clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>n.style.opacity='0', 4000);
+}
+
+const bMap = {'مندوب':'b1','مروج':'b2','مشرف':'b3','مدير منطقة':'b4','مدير اقليمي':'b5'};
+const badge = t => `<span class="badge ${bMap[t]||'b1'}">${t}</span>`;
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  
+  // لێرەدا داتاکان ڕیز دەکەین بۆ ناو خانەکانی ئێکسڵ
+  sheet.appendRow([
+    new Date(), 
+    data.user, 
+    data.center, 
+    data.type, 
+    data.name, 
+    data.mobile, 
+    data.imei, 
+    data.note
+  ]);
+  
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function doGet() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+</script>
+</body>
+</html>
